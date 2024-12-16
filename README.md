@@ -25,20 +25,38 @@ The **Food Delivery Management System** is a web-based application designed to m
    ```go
    dsn := "host=localhost user=postgres password=Nurlan25 dbname=fooddelivery port=27030 sslmode=disable"
 
-   ## Install dependencies using:
-  go mod tidy
+## Install dependencies
 
-Steps
-Start the Backend Server
-Navigate to the project directory containing main.go.
-Run the following command:
-go run main.go
+To install the required dependencies, run the following command:
+
+```bash
+go mod tidy
+
+
+## Steps
+
+### 1. Start the Backend Server
+
+- Navigate to the project directory containing `main.go`.
+- Run the following command to start the backend server:
+  ```bash
+  go run main.go
+
 The server will be available at http://localhost:8080.
-Frontend
-Open the HTML/CSS files provided in a browser to interact with the backend APIs.
-Database
-Ensure the PostgreSQL database is running with tables auto-created during startup.
-Default menu items are seeded for demonstration purposes.
+
+### 2. Frontend
+
+- Open the provided HTML/CSS files in a browser.
+- These files will interact with the backend APIs, allowing you to view and manage the menu and orders.
+
+---
+
+### 3. Database
+
+- Ensure that the PostgreSQL database is running.
+- During server startup, the necessary tables will be auto-created.
+- Default menu items will be seeded automatically for demonstration purposes.
+
 
 ## Tools and Resources Used
 
