@@ -31,7 +31,7 @@ The **Food Delivery Management System** is a web-based application designed to m
 
 To install the required dependencies, run the following command:
 
-```bash
+``bash
 go mod tidy
 
 ---
