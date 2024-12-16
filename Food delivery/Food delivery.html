@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <h1>Food Delivery Service</h1>
+
+  
+    <div class="menu">
+        <h2>Menu</h2>
+        <button id="toggleMenuButton" onclick="toggleMenu()">Load Menu</button>
+        <ul id="menu-list" class="menu-list"></ul>
+    </div>
+
+
+    <div class="order-form">
+        <h2>Place an Order</h2>
+        <label for="customer">Customer Name:</label>
+        <input type="text" id="customer" placeholder="Enter your name"><br><br>
+        <label for="address">Address:</label>
+        <input type="text" id="address" placeholder="Enter your address"><br><br>
+        <label for="food-items">Select Food Items:</label><br>
+        <div id="food-items-container"></div>
+        <button onclick="placeOrder()">Place Order</button>
+    </div>
+
+
+    <div class="order-info">
+        <h2>All Orders</h2>
+        <button onclick="getAllOrders()">Get All Orders</button>
+        <div id="order-details-container" style="display: none; margin-top: 20px;">
+            <h3>Order Details</h3>
+            <div id="order-details" class="order-details"></div>
+        </div>
+    </div>
+
+    <script>
+
+        function loadMenu() {
+            fetch('http://localhost:8080/menu')
+                .then(response => response.json())
+                .then(data => {
+                    const menuList = document.getElementById('menu-list');
+                    menuList.innerHTML = '';
+                    data.forEach(item => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `${item.name} - ${item.description} - ${item.price}₸`;
+                        menuList.appendChild(listItem);
+                    });
+
+                    const foodItemsContainer = document.getElementById('food-items-container');
+                    foodItemsContainer.innerHTML = '';
+                    data.forEach(item => {
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = `food-item-${item.id}`;
+                        checkbox.value = item.id;
+
+                        const label = document.createElement('label');
+                        label.htmlFor = `food-item-${item.id}`;
+                        label.textContent = `${item.name} (${item.price}₸)`;
+
+                        const container = document.createElement('div');
+                        container.appendChild(checkbox);
+                        container.appendChild(label);
+
+                        foodItemsContainer.appendChild(container);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching menu:', error);
+                    alert('Error loading menu. Please check the console for more details.');
+                });
+        }
+
+        function toggleMenu() {
+            const menuList = document.getElementById('menu-list');
+            const toggleButton = document.getElementById('toggleMenuButton');
+
+            if (menuList.style.display === 'none' || menuList.style.display === '') {
+                menuList.style.display = 'block';
+                toggleButton.textContent = 'Hide Menu';
+                loadMenu();
+            } else {
+                menuList.style.display = 'none';
+                toggleButton.textContent = 'Load Menu';
+            }
+        }
+
+        function placeOrder() {
+            const customer = document.getElementById('customer').value;
+            const address = document.getElementById('address').value;
+            const selectedFoodItems = Array.from(document.querySelectorAll('#food-items-container input:checked')).map(input => ({
+                id: parseInt(input.value)
+            }));
+
+            if (selectedFoodItems.length === 0) {
+                alert('Please select at least one food item.');
+                return;
+            }
+
+            const order = {
+                customer,
+                address,
+                food_items: selectedFoodItems
+            };
+
+            fetch('http://localhost:8080/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(order)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Order placed successfully!');
+                    console.log('Order placed:', data);
+                })
+                .catch(error => {
+                    console.error('Error placing order:', error);
+                    alert('Error placing order. Please check the console for more details.');
+                });
+        }
+
+     
+        function getAllOrders() {
+            fetch('http://localhost:8080/orders')
+                .then(response => response.json())
+                .then(data => {
+                    const orderDetailsContainer = document.getElementById('order-details-container');
+                    const orderDetails = document.getElementById('order-details');
+                    orderDetailsContainer.style.display = 'block';
+                    orderDetails.innerHTML = data.map(order => `
+                        <div class="food-item">
+                            <h4>Order ID: ${order.id}</h4>
+                            <p><strong>Customer:</strong> ${order.customer}</p>
+                            <p><strong>Address:</strong> ${order.address}</p>
+                            <p><strong>Total:</strong> ${order.total}₸</p>
+                            <h4>Food Items:</h4>
+                            <div>
+                                ${order.food_items.map(item => `
+                                    <p>${item.name} (${item.price}₸)</p>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    console.error('Error fetching orders:', error);
+                    alert('Error fetching orders. Please check the console for more details.');
+                });
+        }
+    </script>
+
+</body>
+</html>
