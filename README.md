@@ -73,11 +73,15 @@ The server will be available at http://localhost:8080.
 | **HTML/CSS**       | Frontend styling         |
 
 ## Features
-# Menu Management
-View existing menu items.
-Add new menu items.
 
-# Order Management
-Place orders with selected menu items.
-Retrieve order details by ID.
-List all customer orders.
+### Menu Management
+- View existing menu items.
+- Add new menu items.
+
+---
+
+### Order Management
+- Place orders with selected menu items.
+- Retrieve order details by ID.
+- List all customer orders.
+
