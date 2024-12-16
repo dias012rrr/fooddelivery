@@ -25,6 +25,8 @@ The **Food Delivery Management System** is a web-based application designed to m
    ```go
    dsn := "host=localhost user=postgres password=Nurlan25 dbname=fooddelivery port=27030 sslmode=disable"
 
+---
+
 ## Install dependencies
 
 To install the required dependencies, run the following command:
@@ -32,6 +34,7 @@ To install the required dependencies, run the following command:
 ```bash
 go mod tidy
 
+---
 
 ## Steps
 
@@ -57,6 +60,7 @@ The server will be available at http://localhost:8080.
 - During server startup, the necessary tables will be auto-created.
 - Default menu items will be seeded automatically for demonstration purposes.
 
+---
 
 ## Tools and Resources Used
 
