@@ -67,7 +67,6 @@ The server will be available at http://localhost:8080.
 | **Tool/Resource**  | **Purpose**              |
 |--------------------|--------------------------|
 | **Go**             | Backend development      |
-| **Gorilla Mux**    | HTTP routing framework   |
 | **GORM**           | Object Relational Mapping|
 | **PostgreSQL**     | Database management      |
 | **HTML/CSS**       | Frontend styling         |
