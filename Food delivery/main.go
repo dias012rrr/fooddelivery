@@ -136,6 +136,47 @@ func getAllOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orders)
 }
 
+func deleteMenuItem(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	var item FoodItem
+	result := db.First(&item, id)
+	if result.Error != nil {
+		http.Error(w, "Menu item not found", http.StatusNotFound)
+		return
+	}
+
+	db.Delete(&item)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Menu item with ID %d deleted successfully", id)
+}
+
+
+func deleteOrder(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	var order Order
+	result := db.First(&order, id)
+	if result.Error != nil {
+		http.Error(w, "Order not found", http.StatusNotFound)
+		return
+	}
+
+	db.Delete(&order)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Order with ID %d deleted successfully", id)
+}
+
 func main() {
 	initDatabase()
 	r := mux.NewRouter()
@@ -143,7 +184,8 @@ func main() {
 	r.HandleFunc("/menu", addMenuItem).Methods("POST")
 	r.HandleFunc("/order", placeOrder).Methods("POST")
 	r.HandleFunc("/orders", getAllOrders).Methods("GET")
-
+	r.HandleFunc("/menu/{id}", deleteMenuItem).Methods("DELETE")
+	r.HandleFunc("/order/{id}", deleteOrder).Methods("DELETE")
 	r.HandleFunc("/order/{id}", getOrder).Methods("GET")
 
 	c := cors.New(cors.Options{

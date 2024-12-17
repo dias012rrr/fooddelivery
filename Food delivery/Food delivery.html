@@ -54,7 +54,10 @@
                     menuList.innerHTML = '';
                     data.forEach(item => {
                         const listItem = document.createElement('li');
-                        listItem.textContent = `${item.name} - ${item.description} - ${item.price}₸`;
+                        listItem.innerHTML = `
+                                ${item.name} - ${item.description} - ${item.price}₸
+                                <button onclick="deleteMenuItem(${item.id})" style="margin-left: 10px; color: white;">Delete</button>
+                            `;
                         menuList.appendChild(listItem);
                     });
 
@@ -83,6 +86,30 @@
                 });
         }
 
+        function deleteMenuItem(id) {
+            fetch(`http://localhost:8080/menu/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert(`Menu item with ID ${id} deleted successfully!`);
+                    loadMenu();
+                })
+                .catch(error => {
+                    console.error('Error deleting menu item:', error);
+                    alert('Failed to delete the menu item.');
+                });
+        }
+
+        function deleteOrder(id) {
+            fetch(`http://localhost:8080/order/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert(`Order with ID ${id} deleted successfully!`);
+                    getAllOrders();
+                })
+                .catch(error => {
+                    console.error('Error deleting order:', error);
+                    alert('Failed to delete the order.');
+                });
+        }
+
         function toggleMenu() {
             const menuList = document.getElementById('menu-list');
             const toggleButton = document.getElementById('toggleMenuButton');
@@ -97,96 +124,29 @@
             }
         }
 
-        function placeOrder() {
-            const customer = document.getElementById('customer').value;
-            const address = document.getElementById('address').value;
-            const selectedFoodItems = Array.from(document.querySelectorAll('#food-items-container input:checked')).map(input => ({
-                id: parseInt(input.value)
-            }));
-
-            if (selectedFoodItems.length === 0) {
-                alert('Please select at least one food item.');
-                return;
-            }
-
-            const order = {
-                customer,
-                address,
-                food_items: selectedFoodItems
-            };
-
-            fetch('http://localhost:8080/order', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(order)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Order placed successfully!');
-                    console.log('Order placed:', data);
-                })
-                .catch(error => {
-                    console.error('Error placing order:', error);
-                    alert('Error placing order. Please check the console for more details.');
-                });
-        }
-
         function getAllOrders() {
             fetch('http://localhost:8080/orders')
                 .then(response => response.json())
                 .then(data => {
-                    const orderDetailsContainer = document.getElementById('order-details-container');
                     const orderDetails = document.getElementById('order-details');
                     orderDetails.innerHTML = data.map(order => `
-                                    <div class="food-item">
-                                        <h4>Order ID: ${order.id}</h4>
-                                        <p><strong>Customer:</strong> ${order.customer}</p>
-                                        <p><strong>Address:</strong> ${order.address}</p>
-                                        <p><strong>Total:</strong> ${order.total}₸</p>
-                                        <h4>Food Items:</h4>
-                                        <div>
-                                            ${order.food_items.map(item => `
-                                                <p>${item.name} (${item.price}₸)</p>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                `).join('');
+                            <div class="order">
+                                <h4>Order ID: ${order.id}</h4>
+                                <p><strong>Customer:</strong> ${order.customer}</p>
+                                <p><strong>Address:</strong> ${order.address}</p>
+                                <p><strong>Total:</strong> ${order.total}₸</p>
+                                <h4>Food Items:</h4>
+                                <div>
+                                    ${order.food_items.map(item => `<p>${item.name} (${item.price}₸)</p>`).join('')}
+                                </div>
+                                <button onclick="deleteOrder(${order.id})" style="margin-top: 10px; color: red;">Delete Order</button>
+                            </div>
+                            <hr>
+                        `).join('');
                 })
                 .catch(error => {
                     console.error('Error fetching orders:', error);
                     alert('Error fetching orders. Please check the console for more details.');
-                });
-        }
-        function addFoodItem() {
-            const name = document.getElementById('food-name').value;
-            const description = document.getElementById('food-description').value;
-            const price = parseFloat(document.getElementById('food-price').value);
-
-            if (!name || !description || isNaN(price)) {
-                alert('Please fill out all fields correctly.');
-                return;
-            }
-
-            const foodItem = { name, description, price };
-
-            fetch('http://localhost:8080/menu', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(foodItem)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Food item added successfully!');
-                    console.log('Added food item:', data);
-                    loadMenu();
-                })
-                .catch(error => {
-                    console.error('Error adding food item:', error);
-                    alert('Error adding food item. Please check the console for more details.');
                 });
         }
 
