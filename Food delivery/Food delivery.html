@@ -9,13 +9,11 @@
 <body>
     <h1>Food Delivery Service</h1>
 
-  
     <div class="menu">
         <h2>Menu</h2>
         <button id="toggleMenuButton" onclick="toggleMenu()">Load Menu</button>
         <ul id="menu-list" class="menu-list"></ul>
     </div>
-
 
     <div class="order-form">
         <h2>Place an Order</h2>
@@ -28,18 +26,26 @@
         <button onclick="placeOrder()">Place Order</button>
     </div>
 
-
     <div class="order-info">
         <h2>All Orders</h2>
-        <button onclick="getAllOrders()">Get All Orders</button>
+        <button id="toggleOrdersButton" onclick="toggleOrders()">Show Orders</button>
         <div id="order-details-container" style="display: none; margin-top: 20px;">
             <h3>Order Details</h3>
             <div id="order-details" class="order-details"></div>
         </div>
     </div>
+    <div class="add-food-form">
+        <h2>Add a Food Item</h2>
+        <label for="food-name">Name:</label>
+        <input type="text" id="food-name" placeholder="Enter food name"><br><br>
+        <label for="food-description">Description:</label>
+        <input type="text" id="food-description" placeholder="Enter description"><br><br>
+        <label for="food-price">Price:</label>
+        <input type="number" id="food-price" placeholder="Enter price"><br><br>
+        <button onclick="addFoodItem()">Add Food</button>
+    </div>
 
     <script>
-
         function loadMenu() {
             fetch('http://localhost:8080/menu')
                 .then(response => response.json())
@@ -127,35 +133,76 @@
                 });
         }
 
-     
         function getAllOrders() {
             fetch('http://localhost:8080/orders')
                 .then(response => response.json())
                 .then(data => {
                     const orderDetailsContainer = document.getElementById('order-details-container');
                     const orderDetails = document.getElementById('order-details');
-                    orderDetailsContainer.style.display = 'block';
                     orderDetails.innerHTML = data.map(order => `
-                        <div class="food-item">
-                            <h4>Order ID: ${order.id}</h4>
-                            <p><strong>Customer:</strong> ${order.customer}</p>
-                            <p><strong>Address:</strong> ${order.address}</p>
-                            <p><strong>Total:</strong> ${order.total}₸</p>
-                            <h4>Food Items:</h4>
-                            <div>
-                                ${order.food_items.map(item => `
-                                    <p>${item.name} (${item.price}₸)</p>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('');
+                                    <div class="food-item">
+                                        <h4>Order ID: ${order.id}</h4>
+                                        <p><strong>Customer:</strong> ${order.customer}</p>
+                                        <p><strong>Address:</strong> ${order.address}</p>
+                                        <p><strong>Total:</strong> ${order.total}₸</p>
+                                        <h4>Food Items:</h4>
+                                        <div>
+                                            ${order.food_items.map(item => `
+                                                <p>${item.name} (${item.price}₸)</p>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('');
                 })
                 .catch(error => {
                     console.error('Error fetching orders:', error);
                     alert('Error fetching orders. Please check the console for more details.');
                 });
         }
-    </script>
+        function addFoodItem() {
+            const name = document.getElementById('food-name').value;
+            const description = document.getElementById('food-description').value;
+            const price = parseFloat(document.getElementById('food-price').value);
 
+            if (!name || !description || isNaN(price)) {
+                alert('Please fill out all fields correctly.');
+                return;
+            }
+
+            const foodItem = { name, description, price };
+
+            fetch('http://localhost:8080/menu', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(foodItem)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Food item added successfully!');
+                    console.log('Added food item:', data);
+                    loadMenu();
+                })
+                .catch(error => {
+                    console.error('Error adding food item:', error);
+                    alert('Error adding food item. Please check the console for more details.');
+                });
+        }
+
+        function toggleOrders() {
+            const orderDetailsContainer = document.getElementById('order-details-container');
+            const toggleButton = document.getElementById('toggleOrdersButton');
+
+            if (orderDetailsContainer.style.display === 'none' || orderDetailsContainer.style.display === '') {
+                orderDetailsContainer.style.display = 'block';
+                toggleButton.textContent = 'Hide Orders';
+                getAllOrders();
+            } else {
+                orderDetailsContainer.style.display = 'none';
+                toggleButton.textContent = 'Show Orders';
+            }
+        }
+    </script>
 </body>
 </html>
