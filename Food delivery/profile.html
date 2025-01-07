@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - QuickBite</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="profile-container">
+        <header class="profile-header">
+            <div class="logo">
+                <h1>QuickBite</h1>
+            </div>
+            <nav>
+                <a href="index.html" class="btn btn-primary">Home</a>
+                <button id="logoutButton" class="btn btn-primary">Logout</button>
+            </nav>
+        </header>
+
+        <main class="profile-content">
+            <div id="userProfile" class="profile-section">
+                <h2>User Profile</h2>
+                <div class="profile-info">
+                    <p id="profileName">Name: </p>
+                    <p id="profileEmail">Email: </p>
+                    <p id="profilePhone">Phone: </p>
+                </div>
+                <div class="order-history">
+                    <h3>Order History</h3>
+                    <div id="orderHistoryContainer" class="order-history-container">
+                     
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="prevPageButton" class="btn btn-primary">Previous</button>
+                        <span id="currentPageLabel">Page 1</span>
+                        <button id="nextPageButton" class="btn btn-primary">Next</button>
+                    </div>
+                </div>
+                <div class="support-section">
+                    <h3>Support</h3>
+                    <form id="supportForm" enctype="multipart/form-data">
+                        <input type="email" id="supportEmail" placeholder="Your email" required />
+                        <textarea id="supportMessage" placeholder="Type your message here..." required></textarea>
+                        <input type="file" id="supportAttachment" name="attachments" multiple />
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                    <div id="supportStatus"></div>
+                </div>
+
+</main>
+    </div>
+    </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>

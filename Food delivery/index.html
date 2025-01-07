@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickBite Menu</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="layout">
+
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>QuickBite</h1>
+            </div>
+            <nav class="menu-categories">
+                <a href="#recommended" class="active">
+                    <i class="icon-star"></i>
+                    Recommended
+                </a>
+                <a href="#appetizers">
+                    <i class="icon-leaf"></i>
+                    Appetizers
+                </a>
+                <a href="#main-courses">
+                    <i class="icon-utensils"></i>
+                    Main Courses
+                </a>
+                <a href="#desserts">
+                    <i class="icon-ice-cream"></i>
+                    Desserts
+                </a>
+                <a href="#drinks">
+                    <i class="icon-coffee"></i>
+                    Drinks
+                </a>
+            </nav>
+        </aside>
+
+ 
+        <main class="main-content">
+            <header class="main-header">
+                <div class="user-menu">
+                    <a href="#" id="authLink" class="btn btn-primary">
+                        <span class="icon">👤</span>
+                        <span id="authLinkText">Sign In</span>
+                    </a>
+                    <button id="logoutButton" class="btn btn-secondary">Logout</button>
+
+                </div>
+            </header>
+
+
+
+            <section id="recommended" class="menu-section">
+                <h2>Recommended</h2>
+                <div class="filters">
+                    <button class="sort-button" data-sort="asc">Sort: Lowest to Highest</button>
+                    <button class="sort-button" data-sort="desc">Sort: Highest to Lowest</button>
+                </div>
+                <div class="menu-grid" id="recommendedGrid"></div>
+                <div class="pagination" id="recommendedPagination"></div>
+            </section>
+
+
+
+
+
+
+            <section id="appetizers" class="menu-section">
+                <h2>Appetizers</h2>
+                <div class="menu-grid" id="appetizersGrid"></div>
+            </section>
+
+            <section id="main-courses" class="menu-section">
+                <h2>Main Courses</h2>
+                <div class="menu-grid" id="mainCoursesGrid"></div>
+            </section>
+
+            <section id="desserts" class="menu-section">
+                <h2>Desserts</h2>
+                <div class="menu-grid" id="dessertsGrid"></div>
+            </section>
+
+            <section id="drinks" class="menu-section">
+                <h2>Drinks</h2>
+                <div class="menu-grid" id="drinksGrid"></div>
+            </section>
+        </main>
+
+  
+        <aside class="cart-sidebar">
+            <div class="cart-header">
+                <h2>Cart</h2>
+            </div>
+            <div class="cart-items" id="cartItems">
+         
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="cartTotal">$0.00</span>
+                </div>
+                <button class="btn btn-primary" id="checkoutButton">Checkout</button>
+            </div>
+        </aside>
+    </div>
+
+
+    <div class="modal" id="dishModal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="modal-header">
+                <h3 id="modalDishName"></h3>
+            </div>
+            <div class="modal-body">
+                <img id="modalDishImage" src="" alt="">
+                <p id="modalDishDescription"></p>
+                <div id="modalDishOptions"></div>
+                <p class="modal-price">Price: $<span id="modalDishPrice"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCloseButton">Close</button>
+                <button class="btn btn-primary" id="addToCartButton">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal" id="checkoutModal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="modal-header">
+                <h3>Complete Your Order</h3>
+            </div>
+            <div class="modal-body">
+                <form id="checkoutForm">
+                    <label for="customerName">Name:</label>
+                    <input type="text" id="customerName" name="customerName" required>
+                    <label for="customerAddress">Address:</label>
+                    <input type="text" id="customerAddress" name="customerAddress" required>
+                    <label for="customerPhone">Phone Number:</label>
+                    <input type="tel" id="customerPhone" name="customerPhone" required>
+                </form>
+                <div id="checkoutItems"></div>
+                <div class="checkout-total">
+                    <span>Total:</span>
+                    <span id="checkoutTotal">$0.00</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="closeCheckoutButton">Close</button>
+                <button class="btn btn-primary" id="confirmOrderButton">Confirm Order</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+
+</body>
+</html>
