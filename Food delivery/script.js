@@ -1,27 +1,60 @@
-
 let currentUser = null;
 let cart = [];
-let recommendedItems = [];
-let filteredRecommendedItems = [];
-let recommendedPage = 1;
+let allMenuItems = []; // ������ ��� �������� ����
+let recommendedItems = []; // ������ �������� ��� ������� "Recommended"
+let recommendedPage = 1; // ���������� ��� ������� ��������
+
 const itemsPerPage = 5;
-async function checkAuthentication() {
-    const storedUser = localStorage.getItem('currentUser');
-    currentUser = storedUser ? JSON.parse(storedUser) : null;
-    updateAuthUI();
-}
-document.querySelectorAll('.sort-button').forEach(button => {
-    button.addEventListener('click', e => {
-        const sortType = e.target.dataset.sort;
-        if (sortType === 'asc') {
-            filteredRecommendedItems.sort((a, b) => a.price - b.price);
-        } else if (sortType === 'desc') {
-            filteredRecommendedItems.sort((a, b) => b.price - a.price);
+
+async function checkAuthentication(retryCount = 0) {
+    if (retryCount > 3) {
+        console.error("Слишком много неудачных попыток авторизации. Остановка.");
+        return;
+    }
+
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+        console.log("Нет токена, пользователь не авторизован.");
+        currentUser = null;
+        updateAuthUI();
+        return;
+    }
+
+    try {
+        const response = await fetch(`${SERVER_URL}/auth/check`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (response.status === 429) { // Too Many Requests
+            console.warn("Превышен лимит запросов. Повтор через 5 секунд...");
+            setTimeout(() => checkAuthentication(retryCount + 1), 5000);
+            return;
         }
-        recommendedPage = 1;
-        paginateRecommended(filteredRecommendedItems);
-    });
-});
+
+        if (!response.ok) {
+            throw new Error(`Ошибка авторизации: ${response.status}`);
+        }
+
+        const user = await response.json();
+        console.log("Авторизованный пользователь:", user);
+
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        currentUser = user;
+
+        updateAuthUI();
+    } catch (error) {
+        console.error("Ошибка авторизации:", error);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        currentUser = null;
+        updateAuthUI();
+    }
+}
+
+
+
 function updateAuthUI() {
     const authLink = document.getElementById('authLink');
     const authLinkText = document.getElementById('authLinkText');
@@ -170,64 +203,150 @@ document.getElementById('checkoutButton').addEventListener('click', () => {
     }
 });
 
-function paginateRecommended(items) {
+function paginateRecommended(items, currentPage, limit, totalItems) {
     const recommendedGrid = document.getElementById('recommendedGrid');
     const recommendedPagination = document.getElementById('recommendedPagination');
 
-    if (!recommendedGrid || !recommendedPagination) return;
+    if (!recommendedGrid || !recommendedPagination) {
+        console.error('Pagination elements not found in DOM');
+        return;
+    }
 
+    // ������� �����������
     recommendedGrid.innerHTML = '';
     recommendedPagination.innerHTML = '';
 
-    const totalPages = Math.ceil(items.length / itemsPerPage);
-    const startIndex = (recommendedPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-
-    items.slice(startIndex, endIndex).forEach(item => {
+    // ��������� ����
+    items.forEach(item => {
         const menuItem = document.createElement('div');
         menuItem.classList.add('menu-item');
         menuItem.innerHTML = `
             <img src="${item.picture_url}" alt="${item.name}" class="menu-item-image">
             <h4>${item.name}</h4>
             <p>${item.description}</p>
+            <p>Category: ${item.category}</p>
             <p>Price: $${item.price.toFixed(2)}</p>
             <button class="btn btn-primary add-to-cart-btn" data-id="${item.id}">Add to Cart</button>
         `;
         recommendedGrid.appendChild(menuItem);
     });
 
-    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
-        button.addEventListener('click', e => {
-            const itemId = parseInt(e.target.dataset.id, 10);
-            addToCart(itemId);
-        });
-    });
-
+    // ��������� ������ ���������
+    const totalPages = Math.ceil(totalItems / limit);
     for (let i = 1; i <= totalPages; i++) {
         const pageButton = document.createElement('button');
         pageButton.textContent = i;
         pageButton.classList.add('pagination-button');
-        if (i === recommendedPage) pageButton.classList.add('active');
+        if (i === currentPage) pageButton.classList.add('active');
         pageButton.addEventListener('click', () => {
-            recommendedPage = i;
-            paginateRecommended(items);
+            recommendedPage = i; // ��������� ������� ��������
+            const sortDir = document.querySelector('.sort-button[data-sort].active')?.dataset.sort || 'asc'; // �������� ������� ����������� ����������
+            loadRecommendedItems(recommendedPage, itemsPerPage, 'price', sortDir); // ��������� ������
         });
         recommendedPagination.appendChild(pageButton);
     }
 }
-
-async function fetchMenu() {
+async function loadMenuSections() {
     try {
-        const response = await fetch('http://localhost:8080/menu');
-        if (!response.ok) throw new Error('Failed to load menu.');
-        const menuItems = await response.json();
-        populateMenuSections(menuItems);
+        const response = await fetch('http://localhost:8080/menu'); // ������ ������ ���� ��� ������
+        if (!response.ok) throw new Error('Failed to fetch menu sections.');
+
+        const data = await response.json();
+        populateMenuSections(data); // ��������� ������
     } catch (error) {
-        console.error('Error fetching menu:', error);
+        console.error('Error loading menu sections:', error);
     }
 }
 
-function populateMenuSections(menuItems) {
+
+
+
+document.querySelectorAll('.sort-button').forEach(button => {
+    button.addEventListener('click', e => {
+        // ������� �������� ����� � ���� ������
+        document.querySelectorAll('.sort-button').forEach(btn => btn.classList.remove('active'));
+
+        // ��������� �������� ����� ������� ������
+        e.target.classList.add('active');
+
+        const sortDir = e.target.dataset.sort;
+        console.log(`Sorting direction changed to: ${sortDir}`);
+        recommendedPage = 1; // ���������� �� ������ ��������
+        loadRecommendedItems(recommendedPage, itemsPerPage, 'price', sortDir);
+    });
+});
+
+
+
+
+
+
+
+async function fetchMenu(params = {}) {
+    try {
+        const query = new URLSearchParams(params).toString();
+        console.log(`Requesting menu with query: ${query}`);
+
+        const response = await fetch(`http://localhost:8080/items?${query}`);
+        if (!response.ok) throw new Error(`Failed to load menu. Status: ${response.status}`);
+
+        const { data, total } = await response.json();
+        console.log('Data from server:', { data, total });
+
+        return { items: data || [], total: total || 0 };
+    } catch (error) {
+        console.error('Error fetching menu:', error);
+        return { items: [], total: 0 };
+    }
+}
+
+
+async function loadRecommendedItems(
+    page = 1,
+    limit = 5,
+    sort = 'price',
+    sortDir = 'asc',
+    filter = ''
+) {
+    console.log(
+        `Fetching recommended items for page ${page}, limit ${limit}, sort ${sort}, direction ${sortDir}, filter: ${filter}`
+    );
+
+    const { items, total } = await fetchMenu({
+        page,
+        limit,
+        sort,
+        sortDir,
+        filter,
+    });
+
+    if (items.length === 0) {
+        console.warn('No recommended items found');
+        document.getElementById('recommendedGrid').innerHTML = '<p>No items available</p>';
+        return;
+    }
+
+    console.log('Recommended items loaded:', items);
+    paginateRecommended(items, page, limit, total);
+}
+
+
+
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await checkAuthentication();
+        await loadRecommendedItems('price', 1, 4); // ���������� �� ����, ������ ��������, 5 ���������
+        updateCart();
+    } catch (error) {
+        console.error('Error initializing page:', error);
+    }
+});
+
+
+
+
+function populateMenuSections(items) {
     const sectionGrids = {
         appetizers: document.getElementById('appetizersGrid'),
         'main-courses': document.getElementById('mainCoursesGrid'),
@@ -235,14 +354,17 @@ function populateMenuSections(menuItems) {
         drinks: document.getElementById('drinksGrid'),
     };
 
-    Object.values(sectionGrids).forEach(grid => grid && (grid.innerHTML = ''));
+    // ������� ���� ������ ����� ����������� ����� ���������
+    Object.values(sectionGrids).forEach(grid => {
+        if (grid) grid.innerHTML = '';
+    });
 
-    recommendedItems = [];
-    menuItems.forEach(item => {
-        recommendedItems.push(item);
+    // ������������� ��������� �� �������
+    items.forEach(item => {
+        const section = item.category?.toLowerCase().replace(/\s+/g, '-'); // ����������� ���������
+        const sectionGrid = sectionGrids[section]; // ���� ��������������� ������
 
-        const section = item.category?.toLowerCase().replace(' ', '-');
-        if (sectionGrids[section]) {
+        if (sectionGrid) {
             const menuItem = document.createElement('div');
             menuItem.classList.add('menu-item');
             menuItem.innerHTML = `
@@ -252,22 +374,36 @@ function populateMenuSections(menuItems) {
                 <p>Price: $${item.price.toFixed(2)}</p>
                 <button class="btn btn-primary add-to-cart-btn" data-id="${item.id}">Add to Cart</button>
             `;
-            sectionGrids[section].appendChild(menuItem);
+            sectionGrid.appendChild(menuItem);
+        } else {
+            console.warn(`Unknown category: ${item.category}`);
         }
     });
 
-    filteredRecommendedItems = [...recommendedItems];
-    paginateRecommended(filteredRecommendedItems);
+    // ���������� ������������ ��� ������ "Add to Cart"
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+        button.addEventListener('click', e => {
+            const itemId = parseInt(e.target.dataset.id, 10);
+            addToCart(itemId);
+        });
+    });
 }
-
-document.addEventListener('DOMContentLoaded', async () => {
-    await checkAuthentication();
-    await fetchMenu();
-    updateCart();
-
-    const confirmOrderButton = document.getElementById('confirmOrderButton');
-    if (!confirmOrderButton) {
-        console.error('Confirm Order Button not found in DOM');
-    }
+document.getElementById('filterByNameInput').addEventListener('input', (e) => {
+    const filterValue = e.target.value.trim();
+    const sortDir = document.querySelector('.sort-button.active')?.dataset.sort || 'asc';
+    recommendedPage = 1; // ���������� �� ������ ��������
+    loadRecommendedItems(recommendedPage, itemsPerPage, 'price', sortDir, filterValue);
 });
 
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await checkAuthentication();
+        await loadRecommendedItems(1, itemsPerPage, 'price', 'asc'); // ��������� "Recommended"
+        await loadMenuSections(); // ��������� ������ ��� ������
+        updateCart();
+    } catch (error) {
+        console.error('Error initializing page:', error);
+    }
+});
+    

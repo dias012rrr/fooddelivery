@@ -1,4 +1,3 @@
-
 const SERVER_URL = 'http://localhost:8080';
 
 const loginForm = document.getElementById('loginForm');
@@ -20,8 +19,8 @@ authTabs.forEach(tab => {
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
 
     try {
         const response = await fetch(`${SERVER_URL}/login`, {
@@ -30,18 +29,24 @@ loginForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({ email, password }),
         });
 
+        const data = await response.json();
+        console.log("Ответ сервера при логине:", response.status, data);
+
         if (response.ok) {
-            const user = await response.json();
-            localStorage.setItem('currentUser', JSON.stringify(user)); 
+            // **Сохраняем токен и пользователя**
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data));
+
             alert('Login successful');
             window.location.href = 'index.html'; 
+        } else if (response.status === 403) {
+            alert('Ваш email не подтвержден! Проверьте почту.');
         } else {
-            const error = await response.json();
-            alert(`Login failed: ${error.message}`);
+            alert(`Login failed: ${data.message || 'Invalid credentials'}`);
         }
     } catch (error) {
-        console.error('Error during login:', error);
-        alert('An error occurred while logging in');
+        console.error('Ошибка при логине:', error);
+        alert('Ошибка при логине');
     }
 });
 
@@ -49,14 +54,21 @@ loginForm.addEventListener('submit', async (e) => {
 registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const name = document.getElementById('registerName').value;
-    const email = document.getElementById('registerEmail').value;
-    const phone = document.getElementById('registerPhone').value;
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('registerConfirmPassword').value;
+    const name = document.getElementById('registerName').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const phone = document.getElementById('registerPhone').value.trim();
+    const password = document.getElementById('registerPassword').value.trim();
+    const confirmPassword = document.getElementById('registerConfirmPassword').value.trim();
+
+    console.log("Отправка регистрации с:", { name, email, phone, password });
+
+    if (!email || !name) {
+        alert("Email и имя не могут быть пустыми.");
+        return;
+    }
 
     if (password !== confirmPassword) {
-        alert('Passwords do not match');
+        alert('Пароли не совпадают');
         return;
     }
 
@@ -67,15 +79,35 @@ registerForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({ name, email, phone, password }),
         });
 
+        const textResponse = await response.text();
+        console.log("Ответ сервера (text):", textResponse);
+
+        if (!textResponse.trim()) {
+            console.error("Ошибка: сервер вернул пустой ответ");
+            alert("Ошибка регистрации: сервер не отвечает.");
+            return;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(textResponse);
+        } catch (jsonError) {
+            console.error("Ошибка парсинга JSON:", jsonError);
+            alert("Ошибка регистрации: сервер вернул некорректный ответ.");
+            return;
+        }
+
+        console.log("Ответ сервера (JSON):", data);
+
         if (response.ok) {
-            alert('Registration successful');
-            window.location.href = 'auth.html'; 
+            alert('Регистрация успешна. Проверьте email.');
+            window.location.href = 'auth.html';
         } else {
-            const error = await response.json();
-            alert(`Registration failed: ${error.message}`);
+            alert(`Ошибка регистрации: ${data.error || 'Неизвестная ошибка'}`);
         }
     } catch (error) {
-        console.error('Error during registration:', error);
-        alert('An error occurred while registering');
+        console.error('Ошибка при регистрации:', error);
+        alert('Ошибка при регистрации');
     }
 });
+

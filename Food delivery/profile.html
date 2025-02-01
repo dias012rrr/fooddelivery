@@ -17,7 +17,27 @@
                 <button id="logoutButton" class="btn btn-primary">Logout</button>
             </nav>
         </header>
-
+        <div id="adminPanel" style="display: none;" class="admin-panel">
+            <h2>Admin Panel</h2>
+            <div class="admin-actions">
+                <button class="btn btn-secondary" onclick="loadUsers()">Manage Users</button>
+                <button class="btn btn-secondary" onclick="loadOrders()">Manage Orders</button>
+                <button class="btn btn-secondary" onclick="loadMenu()">Manage Menu</button>
+                <button class="btn btn-secondary" onclick="showAddMenuForm()">Add Menu Item</button>
+            </div>
+            <div id="adminContent" class="admin-content"></div>
+        </div>
+        <div id="addMenuForm" class="form-container" style="display: none;">
+            <h3>Add Menu Item</h3>
+            <form id="menuForm">
+                <input type="text" id="menuItemName" placeholder="Name" required />
+                <input type="number" id="menuItemPrice" placeholder="Price" required step="0.01" />
+                <input type="text" id="menuItemCategory" placeholder="Category" required />
+                <input type="url" id="menuItemPicture" placeholder="Picture URL" required />
+                <button type="submit" class="btn btn-primary">Add Item</button>
+                <button type="button" class="btn btn-secondary" onclick="hideAddMenuForm()">Cancel</button>
+            </form>
+        </div>
         <main class="profile-content">
             <div id="userProfile" class="profile-section">
                 <h2>User Profile</h2>

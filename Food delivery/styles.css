@@ -7,6 +7,63 @@
     --border-color: #dfe6e9;
     --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+.admin-panel {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.admin-actions {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.admin-content {
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.form-container {
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.form-container h3 {
+    margin-bottom: 15px;
+}
+
+.form-container input {
+    display: block;
+    margin-bottom: 10px;
+    padding: 10px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
 
 * {
     margin: 0;
@@ -19,6 +76,18 @@ body {
     line-height: 1.6;
     color: var(--primary-color);
     background-color: var(--background-color);
+}
+#addMenuForm {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    z-index: 1000;
+    display: none;
 }
 
 /* Layout */
@@ -669,7 +738,7 @@ body {
 }
 
 .order-item {
-    flex: 1 1 calc(25% - 1rem); /* 4 элемента в строке */
+    flex: 1 1 calc(25% - 1rem); /* 4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ */
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 1rem;
@@ -678,9 +747,9 @@ body {
 }
 
 .order-history-container {
-    display: grid; /* Используем CSS Grid */
-    grid-template-columns: repeat(4, 1fr); /* 4 карточки в ряд */
-    gap: 1rem; /* Расстояние между карточками */
+    display: grid; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ CSS Grid */
+    grid-template-columns: repeat(4, 1fr); /* 4 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅ */
+    gap: 1rem; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
     margin-top: 1rem;
 }
 
@@ -713,26 +782,26 @@ body {
     margin-top: 1rem;
 }
 #logoutButton {
-    width: auto; /* Автоматическая ширина, чтобы подстраиваться под текст */
-    padding: 0.75rem 1.5rem; /* Внутренние отступы */
-    font-size: 1rem; /* Размер шрифта */
-    background-color: var(--secondary-color); /* Основной цвет кнопки */
-    color: white; /* Цвет текста */
-    border: none; /* Убираем рамку */
-    border-radius: 8px; /* Закругление углов */
-    text-align: center; /* Выравнивание текста */
-    cursor: pointer; /* Курсор при наведении */
-    transition: background-color 0.3s, transform 0.2s; /* Плавный переход при наведении */
-    box-shadow: var(--shadow); /* Тень */
+    width: auto; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ */
+    padding: 0.75rem 1.5rem; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
+    font-size: 1rem; /* пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ */
+    background-color: var(--secondary-color); /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ */
+    color: white; /* пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ */
+    border: none; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ */
+    border-radius: 8px; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ */
+    text-align: center; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ */
+    cursor: pointer; /* пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
+    transition: background-color 0.3s, transform 0.2s; /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
+    box-shadow: var(--shadow); /* пїЅпїЅпїЅпїЅ */
 }
 
     #logoutButton:hover {
-        background-color: #4a5568; /* Цвет при наведении */
-        transform: translateY(-1px); /* Подъём кнопки при наведении */
+        background-color: #4a5568; /* пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
+        transform: translateY(-1px); /* пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
     }
 
     #logoutButton:active {
-        transform: scale(0.98); /* Уменьшение при нажатии */
+        transform: scale(0.98); /* пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ */
     }
 
 .order-item {

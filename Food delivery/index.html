@@ -53,14 +53,20 @@
 
 
             <section id="recommended" class="menu-section">
-                <h2>Recommended</h2>
-                <div class="filters">
-                    <button class="sort-button" data-sort="asc">Sort: Lowest to Highest</button>
-                    <button class="sort-button" data-sort="desc">Sort: Highest to Lowest</button>
-                </div>
-                <div class="menu-grid" id="recommendedGrid"></div>
-                <div class="pagination" id="recommendedPagination"></div>
-            </section>
+    <h2>Recommended</h2>
+    <div class="filters">
+        <input
+            type="text"
+            id="filterByNameInput"
+            placeholder="Search by name..."
+            class="filter-input"
+        />
+        <button class="sort-button" data-sort="asc">Sort: Lowest to Highest</button>
+        <button class="sort-button" data-sort="desc">Sort: Highest to Lowest</button>
+    </div>
+    <div class="menu-grid" id="recommendedGrid"></div>
+    <div class="pagination" id="recommendedPagination"></div>
+</section>
 
 
 

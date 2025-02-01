@@ -1,16 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/time/rate"
-	"gopkg.in/gomail.v2"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"io"
 	"log"
 	"net/http"
@@ -19,13 +12,41 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"crypto/rand"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
+	"gopkg.in/gomail.v2"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
+
+func generateSecretKey() []byte {
+	key := make([]byte, 32) // 256-битный ключ
+	_, err := rand.Read(key)
+	if err != nil {
+		log.Fatal("Failed to generate secret key:", err)
+	}
+	return key
+}
+
+var jwtKey = generateSecretKey()
 
 var (
 	db      *gorm.DB
 	logger  = logrus.New()
-	limiter = rate.NewLimiter(1, 5)
+	limiter = rate.NewLimiter(rate.Inf, 50)
 )
+
+type Claims struct {
+	Email string `json:"email"`
+	jwt.RegisteredClaims
+}
 
 // Models
 type SupportMessage struct {
@@ -37,14 +58,15 @@ type SupportMessage struct {
 }
 
 type User struct {
-	ID       uint       `json:"id" gorm:"primaryKey"`
-	Name     string     `json:"name"`
-	Email    string     `json:"email" gorm:"unique;not null"`
-	Phone    string     `json:"phone"`
-	Password string     `json:"password"`
-	Role     string     `json:"role"`
-	Cart     []FoodItem `json:"cart" gorm:"many2many:user_cart_items;constraint:OnDelete:CASCADE"`
-	Orders   []Order    `json:"orders" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	ID             uint       `json:"id" gorm:"primaryKey"`
+	Name           string     `json:"name"`
+	Email          string     `json:"email" gorm:"unique;not null"`
+	Phone          string     `json:"phone"`
+	Password       string     `json:"password"`
+	Role           string     `json:"role"`
+	Cart           []FoodItem `json:"cart" gorm:"many2many:user_cart_items;constraint:OnDelete:CASCADE"`
+	Orders         []Order    `json:"orders" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	EmailConfirmed bool       `json:"email_confirmed"`
 }
 
 type FoodItem struct {
@@ -71,6 +93,79 @@ func initLogger() {
 	logger.SetFormatter(&logrus.JSONFormatter{})
 	logger.SetLevel(logrus.InfoLevel)
 	logger.Info("Logger initialized")
+}
+
+// getFilteredSortedPaginatedItems - универсальная функция для фильтрации, сортировки и пагинации.
+func getFilteredSortedPaginatedItems(w http.ResponseWriter, r *http.Request) {
+	// Извлечение параметров из URL-запроса
+	filter := r.URL.Query().Get("filter")   // Фильтрация по имени
+	sort := r.URL.Query().Get("sort")       // Сортировка
+	sortDir := r.URL.Query().Get("sortDir") // Направление сортировки (asc/desc)
+	pageStr := r.URL.Query().Get("page")    // Номер страницы
+	limitStr := r.URL.Query().Get("limit")  // Количество элементов на страницу
+
+	// Установка значений по умолчанию
+	page := 1
+	limit := 10
+
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
+	}
+
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+		limit = l
+	}
+
+	// Расчет смещения
+	offset := (page - 1) * limit
+
+	// Базовый запрос
+	query := db.Model(&FoodItem{})
+
+	// Применение фильтрации
+	if filter != "" {
+		query = query.Where("name ILIKE ?", "%"+filter+"%")
+	}
+
+	// Применение сортировки
+	if sort != "" {
+		allowedSortFields := map[string]bool{"name": true, "price": true, "category": true}
+		if allowedSortFields[sort] {
+			if sortDir == "desc" {
+				query = query.Order(fmt.Sprintf("%s desc", sort)) // Сортировка по убыванию
+			} else {
+				query = query.Order(fmt.Sprintf("%s asc", sort)) // Сортировка по возрастанию
+			}
+		} else {
+			http.Error(w, "Invalid sort parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Подсчет общего количества записей
+	var total int64
+	query.Count(&total)
+
+	// Применение пагинации
+	query = query.Offset(offset).Limit(limit)
+
+	// Получение данных
+	var items []FoodItem
+	if err := query.Find(&items).Error; err != nil {
+		http.Error(w, "Failed to fetch items", http.StatusInternalServerError)
+		return
+	}
+
+	// Формирование ответа
+	response := map[string]interface{}{
+		"data":  items,
+		"page":  page,
+		"limit": limit,
+		"total": total,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func sendSupportMessage(w http.ResponseWriter, r *http.Request) {
@@ -136,9 +231,9 @@ func sendSupportMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Message saved in database")
 
-	from := "#"
-	password := "#" //нужно заполнить
-	to := "#"       //нужно заполнить
+	from := "turzhanovdanial@gmail.com"
+	password := "dpyr fkuf jocf bcam" //нужно заполнить
+	to := "turzhanovdanial@gmail.com" //нужно заполнить
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
 	m.SetHeader("To", to)
@@ -247,22 +342,49 @@ func getFilteredFoodItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkAuth(w http.ResponseWriter, r *http.Request) {
-	email := r.Header.Get("X-User-Email")
-	if email == "" {
+	tokenHeader := r.Header.Get("Authorization")
+	if tokenHeader == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
+	tokenString := strings.TrimPrefix(tokenHeader, "Bearer ")
+	claims := &Claims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	var user User
-	result := db.Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	if err := db.Where("email = ?", claims.Email).First(&user).Error; err != nil {
+		http.Error(w, "User not found", http.StatusUnauthorized)
 		return
 	}
 
 	json.NewEncoder(w).Encode(user)
 }
+
 func rateLimitMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !limiter.Allow() {
+			logger.WithField("ip", r.RemoteAddr).Warn("Rate limit exceeded")
+			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+var (
+	generalLimiter = rate.NewLimiter(1, 5)   // 1 запрос в секунду, максимум 5 одновременно
+	orderLimiter   = rate.NewLimiter(0.5, 2) // 1 запрос каждые 2 секунды, максимум 2 одновременно
+)
+
+func rateLimitByRouteMiddleware(limiter *rate.Limiter, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !limiter.Allow() {
 			logger.WithField("ip", r.RemoteAddr).Warn("Rate limit exceeded")
@@ -308,40 +430,126 @@ func seedMenu() {
 	}
 	fmt.Println("✅ Initial menu items added!")
 }
+
 func registerUser(w http.ResponseWriter, r *http.Request) {
-	var user struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Phone    string `json:"phone"`
-		Password string `json:"password"`
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Println("Ошибка декодирования JSON:", err)
+		http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		handleError(w, http.StatusBadRequest, "Неверный формат данных", err)
+	log.Println("📌 Данные для регистрации получены:", user)
+
+	if user.Email == "" {
+		log.Println("❌ Ошибка: email пуст!")
+		http.Error(w, "Email не может быть пустым", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		handleError(w, http.StatusInternalServerError, "Ошибка хэширования пароля", err)
+		log.Println("❌ Ошибка хеширования пароля:", err)
+		http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
-	newUser := User{
-		Name:     user.Name,
-		Email:    user.Email,
-		Phone:    user.Phone,
-		Password: string(hashedPassword),
-		Role:     "user",
-	}
+	user.Password = string(hashedPassword)
+	user.EmailConfirmed = false
 
-	if err := db.Create(&newUser).Error; err != nil {
-		handleError(w, http.StatusConflict, "Ошибка регистрации: пользователь уже существует", err)
+	if err := db.Create(&user).Error; err != nil {
+		log.Println("❌ Ошибка сохранения в БД:", err)
+		http.Error(w, "Ошибка регистрации", http.StatusInternalServerError)
 		return
 	}
 
-	logger.WithField("email", newUser.Email).Info("Пользователь успешно зарегистрирован")
-	w.WriteHeader(http.StatusCreated)
+	log.Println("✅ Пользователь зарегистрирован:", user.Email)
+
+	// **Генерация токена**
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": user.Email,
+		"exp":   time.Now().Add(time.Hour * 24).Unix(),
+	})
+	tokenString, _ := token.SignedString(jwtKey)
+
+	log.Println("📌 Генерируем email подтверждение для:", user.Email)
+
+	// **Вызов функции отправки письма**
+	sendEmailConfirmation(user.Email, tokenString)
+
+	log.Println("📩 Письмо на email подтверждение отправлено!")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Регистрация успешна"})
+}
+
+func sendEmailConfirmation(email, token string) {
+	if email == "" {
+		log.Println("❌ Ошибка: email пуст при отправке подтверждения!")
+		return
+	}
+
+	log.Println("📨 Начало отправки email на адрес:", email)
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", "turzhanov.danial@gmail.com")
+	m.SetHeader("To", email)
+	m.SetHeader("Subject", "Подтвердите вашу регистрацию")
+	m.SetBody("text/html", fmt.Sprintf("<p>Для подтверждения регистрации нажмите <a href='http://localhost:8080/confirm?token=%s'>здесь</a></p>", token))
+
+	// Настройки SMTP-сервера
+	smtpServer := "smtp.gmail.com"
+	smtpPort := 587
+	smtpUser := "turzhanov.danial@gmail.com"
+	smtpPass := "dpyr fkuf jocf bcam" // ❗ Используйте пароль приложения Google!
+
+	d := gomail.NewDialer(smtpServer, smtpPort, smtpUser, smtpPass)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	log.Println("🔄 Подключение к SMTP-серверу...")
+
+	// Пробуем отправить письмо
+	if err := d.DialAndSend(m); err != nil {
+		log.Printf("❌ Ошибка отправки письма на %s: %v", email, err)
+	} else {
+		log.Printf("✅ Письмо успешно отправлено на %s", email)
+	}
+}
+
+func confirmEmail(w http.ResponseWriter, r *http.Request) {
+	tokenString := r.URL.Query().Get("token")
+	claims := &Claims{}
+
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusBadRequest)
+		return
+	}
+
+	log.Println("Подтверждение email для:", claims.Email)
+
+	result := db.Model(&User{}).Where("email = ?", claims.Email).Update("email_confirmed", true)
+	if result.Error != nil {
+		log.Println("Ошибка обновления email_confirmed:", result.Error)
+		http.Error(w, "Failed to confirm email", http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		log.Println("Email не найден:", claims.Email)
+		http.Error(w, "Email not found", http.StatusNotFound)
+		return
+	}
+
+	// Повторно получаем пользователя после обновления
+	var user User
+	db.Where("email = ?", claims.Email).First(&user)
+	log.Println("Email подтвержден в БД, текущее значение:", user.EmailConfirmed)
+
+	w.Write([]byte("Email confirmed!"))
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -366,11 +574,26 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !user.EmailConfirmed {
+		handleError(w, http.StatusForbidden, "Email не подтвержден. Проверьте почту.", nil)
+		return
+	}
+
+	// **Генерация JWT-токена**
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": user.Email,
+		"exp":   time.Now().Add(time.Hour * 24).Unix(),
+	})
+	tokenString, _ := token.SignedString(jwtKey)
+
 	logger.WithField("email", user.Email).Info("Пользователь успешно вошел в систему")
+
+	// **Отправляем токен в ответе**
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":    user.ID,
 		"email": user.Email,
 		"role":  user.Role,
+		"token": tokenString, // Добавлен токен
 	})
 }
 
@@ -578,6 +801,23 @@ func createOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(order)
 }
+func adminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		email := r.Header.Get("X-User-Email")
+		if email == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var user User
+		if err := db.Where("email = ?", email).First(&user).Error; err != nil || user.Role != "admin" {
+			http.Error(w, "Forbidden: Admins only", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
 
 func getUserByEmail(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
@@ -599,6 +839,58 @@ func getUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(user)
 }
+func rateLimitWithHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		remaining := limiter.Burst() - int(limiter.Reserve().Delay())
+		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", limiter.Limit()))
+		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+		w.Header().Set("Retry-After", fmt.Sprintf("%d", int(limiter.Reserve().Delay())))
+
+		if !limiter.Allow() {
+			logger.WithField("ip", r.RemoteAddr).Warn("Rate limit exceeded")
+			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+func deleteOrder(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
+
+	var order Order
+	result := db.Preload("FoodItems").First(&order, id)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "Order not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to fetch order", http.StatusInternalServerError)
+		return
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&order).Association("FoodItems").Clear(); err != nil {
+			return err
+		}
+		if err := tx.Delete(&order).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		http.Error(w, "Failed to delete order", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Order %d deleted successfully", id)
+}
 
 func getAllOrders(w http.ResponseWriter, r *http.Request) {
 	var orders []Order
@@ -619,17 +911,59 @@ func getSupportMessages(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
 }
+func logAdminAction(email, action string) {
+	logger.WithFields(logrus.Fields{
+		"admin":     email,
+		"action":    action,
+		"timestamp": time.Now(),
+	}).Info("Admin action logged")
+}
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	var user User
+	result := db.First(&user, id)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to fetch user", http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.Delete(&user).Error; err != nil {
+		http.Error(w, "Failed to delete user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "User %d deleted successfully", id)
+}
 
 func main() {
 	initDatabase()
 	r := mux.NewRouter()
+	r.HandleFunc("/items", getFilteredSortedPaginatedItems).Methods("GET")
+
 	r.HandleFunc("/menu", getMenu).Methods("GET")
 	r.HandleFunc("/menu/{id}", getMenuItem).Methods("GET")
 	r.HandleFunc("/menu", addMenuItem).Methods("POST")
 	r.HandleFunc("/menu/{id}", deleteMenuItem).Methods("DELETE")
 	r.HandleFunc("/order", placeOrder).Methods("POST")
+	r.Handle("/order", rateLimitByRouteMiddleware(orderLimiter, http.HandlerFunc(placeOrder))).Methods("POST")
+	r.HandleFunc("/orders/{id}", deleteOrder).Methods("DELETE")
+
+	r.HandleFunc("/users/{id}", deleteUser).Methods("DELETE")
+
 	r.HandleFunc("/orders", getAllOrders).Methods("GET")
 	r.HandleFunc("/register", registerUser).Methods("POST")
+	r.HandleFunc("/confirm", confirmEmail).Methods("GET")
 	r.HandleFunc("/login", loginUser).Methods("POST")
 	r.HandleFunc("/user/cart", getUserCart).Methods("GET")
 	r.HandleFunc("/user/cart", updateUserCart).Methods("POST")
@@ -643,16 +977,16 @@ func main() {
 	r.HandleFunc("/support", sendSupportMessage).Methods("POST")
 	r.HandleFunc("/support/messages", getSupportMessages).Methods("GET")
 	r.HandleFunc("/support/messages", getSupportMessages).Methods("GET")
-
+	rateLimitedRouter := rateLimitMiddleware(r)
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Requested-With"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Requested-With", "X-User-Email"},
 		ExposedHeaders:   []string{"Authorization"},
 		AllowCredentials: true,
 	})
-	handler := c.Handler(r)
 
+	handler := c.Handler(rateLimitedRouter)
 	fmt.Println("Server running on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }
